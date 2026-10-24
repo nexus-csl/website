@@ -35,5 +35,7 @@ marker = "      - ./images:/app/client/public/images"
 assert marker in s, "Expected Compose images mount missing"
 if "./branding/site:/app/client/dist:ro" not in s:
     s = s.replace(marker, "      - ./branding/site:/app/client/dist:ro\n      - ./librechat.yaml:/app/librechat.yaml:ro\n" + marker)
+if "./branding/site/assets/logo.svg:/app/client/public/assets/logo.svg:ro" not in s:
+    s = s.replace(marker, "      - ./branding/site/assets/logo.svg:/app/client/public/assets/logo.svg:ro\n" + marker)
 p.write_text(s)
 print("BRANDING_CONFIG_READY")

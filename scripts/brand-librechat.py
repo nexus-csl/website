@@ -6,13 +6,15 @@ from pathlib import Path
 import re, json, gzip
 base = Path.cwd()
 site = base / "branding/site"
+(site / "assets/nexus-csl-logo.svg").write_bytes((site / "assets/logo.svg").read_bytes())
 p = site / "index.html"
 s = p.read_text()
 s = re.sub(r"<title>.*?</title>", "<title>Private Nexus CSL AI Chat</title>", s)
 s = s.replace("LibreChat - An open source chat application with support for multiple AI models", "Private Nexus CSL AI Chat for authorized CSL users")
 s = re.sub(r'<link rel="(?:icon|apple-touch-icon)"[^>]*>', "", s)
 if "assets/nexus-brand.css" not in s:
-    s = s.replace("</head>", '<link rel="icon" type="image/svg+xml" href="assets/nexus-csl-favicon.svg?v=1"/><link rel="stylesheet" href="assets/nexus-brand.css?v=1"/></head>')
+    s = s.replace("</head>", '<link rel="icon" type="image/svg+xml" href="assets/nexus-csl-favicon.svg?v=1"/><link rel="stylesheet" href="assets/nexus-brand.css?v=2"/></head>')
+s = s.replace("nexus-brand.css?v=1", "nexus-brand.css?v=2")
 p.write_text(s)
 (site / "index.html.gz").write_bytes(gzip.compress(s.encode()))
 (site / "index.html.br").unlink(missing_ok=True)

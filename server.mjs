@@ -22,12 +22,21 @@ function json(res,status,data){res.statusCode=status;res.setHeader('Content-Type
 async function readJson(req,max){if(!(req.headers['content-type']||'').startsWith('application/json'))throw new HttpError(415,'Please submit using the website form.');let bytes=0;const chunks=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>max)throw new HttpError(413,'This upload is too large. Use up to three files of 5 MB each.');chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new HttpError(400,'Invalid request.');}}
 function checkOrigin(req){if(req.headers['sec-fetch-site']==='cross-site')throw new HttpError(403,'Please submit from the CSL website.');const origin=req.headers.origin;if(origin){const expected=process.env.SITE_URL||`http://${req.headers.host}`;try{if(new URL(origin).origin!==new URL(expected).origin)throw new Error();}catch{throw new HttpError(403,'Please submit from the CSL website.');}}}
 const redirects={'/gallery':'/design-gallery','/history':'/about','/factory':'/capabilities','/general-information':'/faqs','/contact-us':'/contact'};
-export function createServer(){return http.createServer(async(req,res)=>{
+export function createServer(){
+ const configuredChat=process.env.NEXUS_CHAT_URL?.trim();
+ let nexusChatUrl;
+ if(configuredChat){
+  const target=new URL(configuredChat);
+  if(target.protocol!=='https:'||target.username||target.password||target.search||target.hash)throw new Error('NEXUS_CHAT_URL must be an HTTPS URL without credentials, query or fragment.');
+  nexusChatUrl=target.href;
+ }
+ return http.createServer(async(req,res)=>{
  securityHeaders(res);
  try{const url=new URL(req.url,'http://localhost');let path=decodeURIComponent(url.pathname);if(path.includes('\0'))throw new HttpError(400,'Invalid URL.');if(path.length>1&&path.endsWith('/')){res.writeHead(308,{Location:path.slice(0,-1)+url.search});return res.end();}
  if(path==='/nexus')res.setHeader('Cache-Control','no-store');
  if(path==='/health'&&req.method==='GET')return json(res,200,{status:'ok'});
  if(path.startsWith('/api/')){
+  if(nexusChatUrl&&path.startsWith('/api/nexus/'))throw new HttpError(410,'Nexus has moved to the dedicated staff chat. Please open /nexus.');
   if(req.method!=='POST')throw new HttpError(405,'Method not allowed.');checkOrigin(req);limit('api:'+ip(req),30);
   if(path==='/api/nexus/login'){
    nexusLoginLimit(ip(req));if(!process.env.NEXUS_PASSWORD_HASH)throw new HttpError(503,'Staff access is not configured yet. Please contact the CSL administrator.');
@@ -47,6 +56,7 @@ export function createServer(){return http.createServer(async(req,res)=>{
   throw new HttpError(404,'Endpoint not found.');
  }
  if(!['GET','HEAD'].includes(req.method))throw new HttpError(405,'Method not allowed.');
+ if(path==='/nexus'&&nexusChatUrl){res.setHeader('X-Robots-Tag','noindex, nofollow');res.writeHead(302,{Location:nexusChatUrl});return res.end();}
  if(redirects[path]){res.writeHead(301,{Location:redirects[path]});return res.end();}
  const origin=(process.env.SITE_URL||'http://localhost:3000').replace(/\/$/,'');
  if(path==='/robots.txt'){res.setHeader('Content-Type','text/plain');return res.end(process.env.SEARCH_INDEXING==='true'?`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /nexus\nSitemap: ${origin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');}

@@ -1,3 +1,4 @@
+import {renderNexusOnboarding} from './lib/nexus-onboarding.mjs';
 import {discoveryText} from './lib/discovery.mjs';
 import {heritageImages} from './lib/heritage.mjs';
 import {verifyPassword,hasNexusSession,nexusCookie,openNexusSession,closeNexusSession,nexusAnswer} from './lib/nexus.mjs';
@@ -59,12 +60,14 @@ export function createServer(){
  if(path==='/nexus'&&nexusChatUrl){res.setHeader('X-Robots-Tag','noindex, nofollow');res.writeHead(302,{Location:nexusChatUrl});return res.end();}
  if(redirects[path]){res.writeHead(301,{Location:redirects[path]});return res.end();}
  const origin=(process.env.SITE_URL||'http://localhost:3000').replace(/\/$/,'');
- if(path==='/robots.txt'){res.setHeader('Content-Type','text/plain');return res.end(process.env.SEARCH_INDEXING==='true'?`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /nexus\nSitemap: ${origin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');}
+ if(path==='/robots.txt'){res.setHeader('Content-Type','text/plain');return res.end(process.env.SEARCH_INDEXING==='true'?`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /nexus\nDisallow: /onboarding\nDisallow: /nexus-training\nSitemap: ${origin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');}
  if(path==='/sitemap.xml'){res.setHeader('Content-Type','application/xml');return res.end(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${paths.map(p=>`<url><loc>${origin.replace(/&/g,'&amp;')+p}</loc><lastmod>2026-10-24</lastmod>${heritageImages.filter(x=>x.pages.some(old=>({'/factory':'/capabilities','/history':'/about'}[old]||old)===p)).map(x=>`<image:image><image:loc>${origin}/assets/heritage/${x.file}</image:loc></image:image>`).join('')}</url>`).join('')}</urlset>`);}
  if(path==='/llms.txt'||path==='/llms-full.txt'){res.setHeader('Content-Type','text/plain; charset=utf-8');return res.end(discoveryText(origin,paths,path==='/llms-full.txt'));}
  if(path.startsWith('/assets/')||['/styles.css','/app.js','/analytics.js','/site.webmanifest'].includes(path)){
   const file=resolve(publicDir,'.'+path);if(!file.startsWith(publicDir+sep))throw new HttpError(404,'Not found.');let info;try{info=await stat(file);}catch{throw new HttpError(404,'Not found.');}if(!info.isFile()||!mime[extname(file)])throw new HttpError(404,'Not found.');res.setHeader('Content-Type',mime[extname(file)]);res.setHeader('Cache-Control',['.css','.js'].includes(extname(file))?'no-cache':'public, max-age=3600');res.setHeader('Content-Length',info.size);return res.end(req.method==='HEAD'?undefined:await readFile(file));
  }
+ if(path==='/adam'||path==='/ben'){res.setHeader('X-Robots-Tag','noindex, nofollow');res.writeHead(302,{Location:'/onboarding'+path});return res.end();}
+ const onboarding=renderNexusOnboarding(path);if(onboarding){res.statusCode=onboarding.status;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('X-Robots-Tag','noindex, nofollow');return res.end(req.method==='HEAD'?undefined:onboarding.html);}
  const page=render(path);res.statusCode=page.status;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control',path==='/nexus'?'no-store':'no-cache');res.end(req.method==='HEAD'?undefined:page.html);
  }catch(e){if(e.status)json(res,e.status,{error:e.message});else{console.error('Request failed:',e.code||e.name);json(res,500,{error:'We could not complete this request. Please try again or contact our team.'});}}
  });}

@@ -28,7 +28,7 @@ config={
    "dropParams":["temperature","top_p","presence_penalty","frequency_penalty","max_tokens"]
  }]},
  "modelSpecs":{"enforce":True,"prioritize":True,"list":[{
-   "name":"nexus-csl","label":"Nexus CSL","default":True,
+   "name":"nexus-csl","label":"Nexus CSL","softDefault":True,
    "description":"CSL research assistant",
    "iconURL":"/assets/nexus-csl-favicon.svg",
    "preset":{"endpoint":"Nexus","model":"gpt-6-luna","modelLabel":"Nexus",
